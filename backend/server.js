@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const { User } = require("./db/mongo");
 const cors = require("cors");
+const bcrypt = require("bcrypt");
 
 const PORT = 4000;
 
@@ -27,14 +28,13 @@ async function signUp(req, res){
     const userInDb = await User.findOne({
         email: email
     });
-    console.log("userInDb:", userInDb);
     if (userInDb != null) {
         res.status(400).send("email already exists");
         return;
     };
     const user = {
         email: email,
-        password: password
+        password: cachePassword(password)
     };
     try{
         await User.create(user);
@@ -50,8 +50,6 @@ async function signUp(req, res){
 async function login(req, res){
     const email = req.body.email;
     const body = req.body;
-    console.log('body:', body);
-    console.log("users  in db:", users);
 
 const userInDb =  await User.findOne({
     email: body.email
@@ -61,12 +59,26 @@ if (userInDb === null) {
     return;
 }
 const passwordInDb = userInDb.password;
-if (passwordInDb != body.password) {
-    res.status(400).send("wrong password");
+if (!isPasswordCorrect(req.body.password, passwordInDb)) {
+    res.status(401).send("wrong password");
     return;
 }
     res.send({
         userId: userInDb._id,
         token: "token"
     });
+}
+
+
+function cachePassword(password) {
+    const salt = bcrypt.genSaltSync(10);
+    const hash = bcrypt.hashSync(password, salt);
+    console.log("hash:", hash);
+    return hash; 
+}
+
+function isPasswordCorrect(password, hash) {
+    const isOk = bcrypt.compareSync(password, hash);
+    console.log("isOk:", isOk);
+    return isOk;
 }
