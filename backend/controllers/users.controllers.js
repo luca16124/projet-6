@@ -1,6 +1,7 @@
 const { User } = require("../models/User");
 const bcrypt = require("bcrypt");
 const express = require("express");
+const jsonwebtoken = require("jsonwebtoken");
 
 async function signUp(req, res) {
     const email = req.body.email;
@@ -46,15 +47,24 @@ if (!isPasswordCorrect(req.body.password, passwordInDb)) {
 }
     res.send({
         userId: userInDb._id,
-        token: "token"
+        token: generateToken(userInDb._id)
     });
+}
+
+function generateToken(idInDb) {
+    const payload = {
+        userId: idInDb
+    };
+    const token = jsonwebtoken.sign(payload, "CHAT", {
+        expiresIn: "1d"
+    });
+    return token;
 }
 
 
 function cachePassword(password) {
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
-    console.log("hash:", hash);
     return hash; 
 }
 

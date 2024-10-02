@@ -13,6 +13,3 @@ async function connect() {
     }
 }
 connect();
-
-
-module.exports = { mongoose };
