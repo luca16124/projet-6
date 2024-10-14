@@ -185,21 +185,14 @@ async function postBook(req, res) {
   const stringifiedBook = req.body.book;
   const book = JSON.parse(stringifiedBook);
   const filename = req.file.filename;
-  
-  // Path to original uploaded image
   const originalImagePath = path.join(__dirname, "../uploads", filename);
-
-  // Define path for optimized image
   const optimizedImagePath = path.join(__dirname, "../uploads", "optimized-" + filename);
 
   try {
-    // Use sharp to resize and optimize the image
     await sharp(originalImagePath)
-      .resize(500) // Resize the image to 500px width (maintaining aspect ratio)
-      .jpeg({ quality: 80 }) // Convert to jpeg and set quality to 80%
-      .toFile(optimizedImagePath); // Save the optimized image
-
-    // Save the path of the optimized image in the database
+      .resize(500)
+      .toFile(optimizedImagePath);
+      
     book.imageUrl = "optimized-" + filename;
 
     const result = await Book.create(book);
