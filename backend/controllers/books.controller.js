@@ -63,18 +63,29 @@ async function getBestRating(req, res) {
 
 async function putBook(req, res) {
   const id = req.params.id;
-  const book = JSON.parse(req.body.book);
+  console.log('Request body:', req.body);
+
+  let book;
+  try {
+    book = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+  } catch (e) {
+    return res.status(400).send("Invalid JSON format for book");
+  }
+
+  if (!book) {
+    return res.status(400).send("Book data is missing");
+  }
+
   try {
     const bookInDb = await Book.findById(id);
-    if (bookInDb == null) {
-      res.status(404).send("Book not found");
-      return;
+    if (!bookInDb) {
+      return res.status(404).send("Book not found");
     }
+
     const userIdInDb = bookInDb.userId;
     const userIdInToken = req.tokenPayload.userId;
     if (userIdInDb != userIdInToken) {
-      res.status(403).send("You cannot modify other people's books");
-      return;
+      return res.status(403).send("You cannot modify other people's books");
     }
 
     const newBook = {};
@@ -91,6 +102,7 @@ async function putBook(req, res) {
     res.status(500).send("Something went wrong:" + e.message);
   }
 }
+
 
 async function deleteBook(req, res) {
   const id = req.params.id;
