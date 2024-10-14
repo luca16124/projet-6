@@ -63,7 +63,6 @@ async function getBestRating(req, res) {
 
 async function putBook(req, res) {
   const id = req.params.id;
-  console.log('Request body:', req.body);
 
   let book;
   try {
