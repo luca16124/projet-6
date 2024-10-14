@@ -2,6 +2,8 @@ const { upload } = require("../middlewares/multer");
 const { Book } = require("../models/Book");
 const express = require("express");
 const jwt = require("jsonwebtoken");
+const sharp = require("sharp");
+const path = require("path");
 
 const booksRouter = express.Router();
 booksRouter.get("/bestrating", getBestRating);
@@ -63,8 +65,8 @@ async function getBestRating(req, res) {
 
 async function putBook(req, res) {
   const id = req.params.id;
-
   let book;
+  
   try {
     book = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
   } catch (e) {
@@ -92,7 +94,20 @@ async function putBook(req, res) {
     if (book.author) newBook.author = book.author;
     if (book.year) newBook.year = book.year;
     if (book.genre) newBook.genre = book.genre;
-    if (req.file != null) newBook.imageUrl = req.file.filename;
+
+    if (req.file != null) {
+      const originalImagePath = path.join(__dirname, "../uploads", req.file.filename);
+      const optimizedImagePath = path.join(__dirname, "../uploads", "optimized-" + req.file.filename);
+      
+      // Optimize the image
+      await sharp(originalImagePath)
+        .resize(500)
+        .jpeg({ quality: 80 })
+        .toFile(optimizedImagePath);
+
+      // Update the image URL in the database
+      newBook.imageUrl = "optimized-" + req.file.filename;
+    }
 
     await Book.findByIdAndUpdate(id, newBook);
     res.send("Book updated");
@@ -101,6 +116,7 @@ async function putBook(req, res) {
     res.status(500).send("Something went wrong:" + e.message);
   }
 }
+
 
 
 async function deleteBook(req, res) {
@@ -164,12 +180,28 @@ async function getBookById(req, res) {
   }
 }
 
+
 async function postBook(req, res) {
   const stringifiedBook = req.body.book;
   const book = JSON.parse(stringifiedBook);
   const filename = req.file.filename;
-  book.imageUrl = filename;
+  
+  // Path to original uploaded image
+  const originalImagePath = path.join(__dirname, "../uploads", filename);
+
+  // Define path for optimized image
+  const optimizedImagePath = path.join(__dirname, "../uploads", "optimized-" + filename);
+
   try {
+    // Use sharp to resize and optimize the image
+    await sharp(originalImagePath)
+      .resize(500) // Resize the image to 500px width (maintaining aspect ratio)
+      .jpeg({ quality: 80 }) // Convert to jpeg and set quality to 80%
+      .toFile(optimizedImagePath); // Save the optimized image
+
+    // Save the path of the optimized image in the database
+    book.imageUrl = "optimized-" + filename;
+
     const result = await Book.create(book);
     res.send({ message: "Book posted", book: result });
   } catch (e) {
@@ -177,6 +209,7 @@ async function postBook(req, res) {
     res.status(500).send("Something went wrong:" + e.message);
   }
 }
+
 async function getBooks(req, res) {
   try {
     const books = await Book.find();
